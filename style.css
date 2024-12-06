@@ -1,0 +1,61 @@
+/* Reset margin and padding for the entire page */
+body,
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+
+}
+
+body {
+    padding: 16px;
+    color: #333333;
+}
+
+/* Container to hold both textarea and div side by side */
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+/* Style for the textarea on the left */
+.left {
+    width: calc(50% - 8px);
+    /* Adjust the width of the textarea as needed */
+    height: calc(100vh - 120px);
+    /* Height calculation */
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* Style for the div on the right */
+.right {
+    width: calc(50% - 8px);
+    /* Adjust the width of the div as needed */
+    height: calc(100vh - 120px);
+    /* Height calculation */
+    box-sizing: border-box;
+    margin-left: 20px;
+    position: relative;
+}
+
+textarea {
+    border: 1px solid #ccc;
+    background-color: #ffffff;
+    padding: 10px;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    white-space: pre;
+}
+select{
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    background-color: #ffffff;
+}
+.label
+{
+    height: 30px;
+}
