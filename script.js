@@ -74,13 +74,11 @@ class SqliteConverter {
     }
 
     translate(value, targetType) {
-        console.log(targetType);
         value = this.replaceAll(value, '`', '');
         value = this.replaceAll(value, ' timestamp with time zone', ' timestamptz');
         value = this.replaceAll(value, ' timestamp without time zone', ' timestamp');
         value = this.replaceAll(value, ' character varying', ' varchar');
         value = this.replaceAll(value, ' COLLATE pg_catalog."default"', '');
-        console.log(value);
         let tableParser = new TableParser();
         tableParser.parseAll(value);
         let tables = tableParser.getResult();
@@ -91,15 +89,15 @@ class SqliteConverter {
             lines.push('');
         }
         let resultTable = lines.join('\r\n');
-        document.querySelector('.output').value = resultTable;
+        return resultTable;
     }
 
     convertQuery(table, targetType) {
         if (targetType === 'sqlite') {
             return this.toSqliteOut(table, targetType);
-        } else if (targetType === 'mysql') {
+        } else if (targetType === 'mysql' || targetType === 'mariadb') {
             return this.toMySQLOut(table, targetType);
-        } else if (targetType === 'postgresql') {
+        } else if (targetType === 'pgsql' || targetType === 'postgresql') {
             return this.toPostgreSQLOut(table, targetType);
         }
     }
@@ -162,11 +160,11 @@ class SqliteConverter {
             tableName = tableName.split('.')[1];
         }
         let lines = [];
-        if(targetType == 'mysql')
+        if(targetType === 'mysql' || targetType === 'mariadb')
         {
             tableName = '`' + tableName + '`';
         }
-        else if(targetType == 'postgresql')
+        else if(targetType === 'pgsql' || targetType === 'postgresql')
         {
             tableName = '"' + tableName + '"';
         }
@@ -178,6 +176,7 @@ class SqliteConverter {
             let colDef = '\t' + table.columns[i].Field + ' ' + table.columns[i].Type;
             if (primaryKey) {
                 colDef += ' PRIMARY KEY';
+                table.columns[i].Nullable = false;
             }
             if (table.columns[i].Nullable) {
                 colDef += ' NULL';
@@ -186,13 +185,28 @@ class SqliteConverter {
             }
             let defaultValue = table.columns[i].Default;
             if (defaultValue !== '' && defaultValue !== null) {
-                colDef += ' DEFAULT ' + defaultValue;
+                defaultValue = this.replaceAll(defaultValue, '::character varying', '');
+                defaultValue = this.fixDefaultValue(defaultValue, targetType);
+                if (defaultValue !== '' && defaultValue !== null) {
+                    colDef += ' DEFAULT ' + defaultValue;
+                }
             }
             linesCol.push(colDef);
         }
         lines.push(linesCol.join(',\r\n'));
         lines.push(');');
         return lines.join('\r\n');
+    }
+    
+    fixDefaultValue(defaultValue, targetType) {
+        if(targetType === 'sqlite')
+        {
+            if(defaultValue.toLowerCase().indexOf('now(') !== -1)
+            {
+                defaultValue = '';
+            }
+        }
+        return defaultValue;
     }
 
     toSqliteType(type, length) {
@@ -213,7 +227,6 @@ class SqliteConverter {
     }
 
     toMySQLType(type, length) {
-        console.log(type)
         let mysqlType = 'TEXT';
         for (let i in this.dbToMySQL) {
             if (this.dbToMySQL.hasOwnProperty(i)) {
@@ -255,13 +268,13 @@ function init() {
         document.querySelector('.input').addEventListener('change', (e) => {
             let value = e.target.value;
             let targetType = document.querySelector('.target_type').value;
-            converter.translate(value, targetType);
+            document.querySelector('.output').value = converter.translate(value, targetType);
         });
 
         document.querySelector('.target_type').addEventListener('change', (e) => {
             let targetType = e.target.value;
             let value = document.querySelector('.input').value;
-            converter.translate(value, targetType);
+            document.querySelector('.output').value = converter.translate(value, targetType);
         });
 
         document.querySelector('.input').addEventListener('paste', (e) => {
@@ -269,14 +282,14 @@ function init() {
             setTimeout(() => {
                 let targetType = document.querySelector('.target_type').value;
                 let value = document.querySelector('.input').value;
-                converter.translate(value, targetType);
+                document.querySelector('.output').value = converter.translate(value, targetType);
             }, 0); // Timeout 0 ms to ensure paste is completed
         });
 
         // Handle initial value in the input element
         let targetType = document.querySelector('.target_type').value;
         let value = document.querySelector('.input').value;
-        converter.translate(value, targetType);
+        document.querySelector('.output').value = converter.translate(value, targetType);
     });
 }
 
