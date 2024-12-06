@@ -10,6 +10,7 @@ class SqliteConverter {
             "float": "REAL",
             "double": "REAL",
             "decimal": "REAL",  // SQLite doesn't have DECIMAL, treated as REAL
+            "nvarchar": "NVARCHAR",
             "varchar": "NVARCHAR",
             "character varying": "NVARCHAR",
             "char": "TEXT",
