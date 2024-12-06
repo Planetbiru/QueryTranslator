@@ -71,7 +71,7 @@ function TableParser() {
 
                 // append to the arr
                 let columnName = fld_def.groups.fname.trim();
-                if (result[0].toLocaleLowerCase().indexOf('primary key') != -1) {
+                if (primaryKey == null && result[0].toLocaleLowerCase().indexOf('primary key') != -1) {
                     primaryKey = columnName;
                 }
                 if (!this.inArray(columnList, columnName)) {
