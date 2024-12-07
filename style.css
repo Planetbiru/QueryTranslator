@@ -11,12 +11,13 @@ html {
 body {
     padding: 16px;
     color: #333333;
+    box-sizing: border-box;
 }
 
 /* Container to hold both textarea and div side by side */
 .container {
     display: flex;
-    height: 100vh;
+    height: 100%;
 }
 
 /* Style for the textarea on the left */
