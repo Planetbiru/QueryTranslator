@@ -123,7 +123,7 @@ class SqliteConverter {
         mysqlTable.columns = [];
         for (let i in table.columns) {
             let column = Object.assign({}, table.columns[i]);
-            column.Field = "`"+column.Field+"`"
+            column.Field = column.Field
             column.Type = this.toMySQLType(column.Type, column.Length);
             mysqlTable.columns.push(column);
         }
@@ -179,10 +179,13 @@ class SqliteConverter {
                 colDef += ' PRIMARY KEY';
                 table.columns[i].Nullable = false;
             }
-            if (table.columns[i].Nullable) {
-                colDef += ' NULL';
-            } else {
-                colDef += ' NOT NULL';
+            else
+            {
+                if (table.columns[i].Nullable) {
+                    colDef += ' NULL';
+                } else {
+                    colDef += ' NOT NULL';
+                }
             }
             let defaultValue = table.columns[i].Default;
             if (defaultValue !== '' && defaultValue !== null) {
