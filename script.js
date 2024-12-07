@@ -33,7 +33,7 @@ function init() {
 }
 
 // Instantiate the class
-const converter = new SqliteConverter();
+const converter = new SQLConverter();
 
 // Initialize event listeners
 init();
