@@ -15,7 +15,7 @@ class SQLConverter {
         this.dbToSqlite = {
             // MySQL and PostgreSQL types to SQLite mapping
             "int": "INTEGER",
-            "tinyint": "INTEGER",  // MySQL treats tinyint as integer
+            "tinyint(1)": "BOOLEAN",  // MySQL treats tinyint(1) as boolean
             "tinyint": "INTEGER",  // MySQL treats tinyint as integer
             "smallint": "INTEGER",
             "mediumint": "INTEGER",
@@ -28,14 +28,14 @@ class SQLConverter {
             "varchar": "NVARCHAR",
             "character varying": "NVARCHAR",
             "char": "TEXT",
-            "text": "TEXT",
             "tinytext": "TEXT",
             "mediumtext": "TEXT",
             "longtext": "TEXT",
-            "date": "TEXT",  // SQLite stores dates as TEXT in ISO 8601 format
-            "datetime": "TEXT", // SQLite stores datetime as TEXT in ISO 8601 format
-            "timestamp": "TEXT", // Same as datetime for SQLite
-            "time": "TEXT", // Same as datetime for SQLite
+            "text": "TEXT",
+            "datetime": "DATETIME", // SQLite stores datetime as DATETIME in ISO 8601 format
+            "timestamp": "DATETIME", // Same as datetime for SQLite
+            "date": "DATE",  // SQLite stores dates as DATE in ISO 8601 format
+            "time": "TIME", // Same as datetime for SQLite
             "year": "INTEGER", // SQLite stores year as integer
             "boolean": "INTEGER", // SQLite stores boolean as integer (0 for false, 1 for true)
             "json": "TEXT", // SQLite supports JSON as TEXT
@@ -50,39 +50,44 @@ class SQLConverter {
 
         this.dbToMySQL = {
             // SQLite types to MySQL mapping
-            "INTEGER": "INT",
-            "REAL": "FLOAT",
-            "TEXT": "TEXT",
-            "NVARCHAR": "VARCHAR",
-            "VARCHAR": "VARCHAR",
-            "CHARACTER VARYING": "VARCHAR",
-            "TINYINT(1)": "TINYINT(1)",
-            "BOOLEAN": "TINYINT(1)",
-            "DATETIME": "DATETIME",
-            "DATE": "DATE",
-            "TIMESTAMPTZ": "TIMESTAMP",
-            "TIMESTAMP WITH TIME ZONE": "TIMESTAMP",
-            "TIMESTAMP WITHOUT TIME ZONE": "DATETIME",
-            "TIMESTAMP": "TIMESTAMPTZ",
-            "JSON": "JSON"
+            "integer": "INT",
+            "int": "INT",
+            "real": "FLOAT",
+            "tinytext": "TINYTEXT",
+            "mediumtext": "MEDIUMTEXT",
+            "longtext": "LONGTEXT",
+            "text": "TEXT",
+            "nvarchar": "VARCHAR",
+            "varchar": "VARCHAR",
+            "character varying": "VARCHAR",
+            "tinyint(1)": "TINYINT(1)",
+            "boolean": "TINYINT(1)",
+            "datetime": "DATETIME",
+            "date": "DATE",
+            "timestamptz": "TIMESTAMP",
+            "timestamp with time zone": "TIMESTAMP",
+            "timestamp without time zone": "DATETIME",
+            "timestamp": "TIMESTAMPTZ",
+            "json": "JSON"
         };
-
+        
         this.dbToPostgreSQL = {
             // SQLite types to PostgreSQL mapping
-            "INTEGER": "INTEGER",
-            "REAL": "REAL",
-            "TEXT": "TEXT",
-            "TINYINT(1)": "BOOLEAN",
-            "NVARCHAR": "CHARACTER VARYING",
-            "VARCHAR": "CHARACTER VARYING",
-            "BOOLEAN": "BOOLEAN",
-            "DATETIME": "TIMESTAMP",
-            "DATE": "DATE",
-            "TIMESTAMPTZ": "TIMESTAMP WITH TIME ZONE",
-            "TIMESTAMP": "TIMESTAMP WITH TIME ZONE",
-            "DATETIME": "TIMESTAMP WITHOUT TIME ZONE",
-            "JSON": "JSONB"
+            "integer": "INTEGER",
+            "real": "REAL",
+            "text": "TEXT",
+            "tinyint(1)": "BOOLEAN",
+            "nvarchar": "CHARACTER VARYING",
+            "varchar": "CHARACTER VARYING",
+            "boolean": "BOOLEAN",
+            "datetime": "TIMESTAMP",
+            "date": "DATE",
+            "timestamptz": "TIMESTAMP WITH TIME ZONE",
+            "timestamp": "TIMESTAMP WITH TIME ZONE",
+            "datetime": "TIMESTAMP WITHOUT TIME ZONE",
+            "json": "JSONB"
         };
+        
     }
 
     /**
@@ -376,11 +381,15 @@ class SQLConverter {
      * @returns {string} The converted SQLite column type.
      */
     toSqliteType(type, length) {
+        if(type.toLowerCase() == 'tinyint' && length == 1)
+        {
+            return 'BOOLEAN';
+        }
         let sqliteType = 'TEXT';
         for (let i in this.dbToSqlite) {
             if (this.dbToSqlite.hasOwnProperty(i)) {
                 let key = i.toString();
-                if (type.toLowerCase().indexOf(key.toLowerCase()) === 0) {
+                if (type.toLowerCase().startsWith(key.toLowerCase())) {
                     sqliteType = this.dbToSqlite[key];
                     break;
                 }
@@ -422,7 +431,7 @@ class SQLConverter {
         for (let i in this.dbToMySQL) {
             if (this.dbToMySQL.hasOwnProperty(i)) {
                 let key = i.toString();
-                if (type.toLowerCase().indexOf(key.toLowerCase()) === 0) {
+                if (type.toLowerCase().startsWith(key.toLowerCase())) {
                     mysqlType = this.dbToMySQL[key];
                     break;
                 }
@@ -450,7 +459,7 @@ class SQLConverter {
         for (let i in this.dbToPostgreSQL) {
             if (this.dbToPostgreSQL.hasOwnProperty(i)) {
                 let key = i.toString();
-                if (type.toLowerCase().indexOf(key.toLowerCase()) === 0) {
+                if (type.toLowerCase().startsWith(key.toLowerCase())) {
                     pgType = this.dbToPostgreSQL[key];
                     break;
                 }
