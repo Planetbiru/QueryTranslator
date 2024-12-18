@@ -50,8 +50,10 @@ class SQLConverter {
 
         this.dbToMySQL = {
             // SQLite types to MySQL mapping
+            "bigint": "BIGINT",
+            "mediumint": "MEDIUMINT",
+            "smallint": "SMALLINT",
             "integer": "INT",
-            "int": "INT",
             "real": "FLOAT",
             "tinytext": "TINYTEXT",
             "mediumtext": "MEDIUMTEXT",
@@ -61,7 +63,9 @@ class SQLConverter {
             "varchar": "VARCHAR",
             "character varying": "VARCHAR",
             "tinyint(1)": "TINYINT(1)",
+            "tinyint": "TINYINT",
             "boolean": "TINYINT(1)",
+            "int": "INT",
             "datetime": "DATETIME",
             "date": "DATE",
             "timestamptz": "TIMESTAMP",
@@ -73,18 +77,28 @@ class SQLConverter {
         
         this.dbToPostgreSQL = {
             // SQLite types to PostgreSQL mapping
+            "bigint": "BIGINT",
+            "mediumint": "INTEGER",
+            "smallint": "INTEGER",
+            "tinyint(1)": "BOOLEAN",
+            "tinyint": "INTEGER",
             "integer": "INTEGER",
             "real": "REAL",
+            "longtext": "TEXT",
+            "mediumtext": "TEXT",
+            "smalltext": "TEXT",
+            "tinytext": "TEXT",
             "text": "TEXT",
-            "tinyint(1)": "BOOLEAN",
+            "character varying": "CHARACTER VARYING",
             "nvarchar": "CHARACTER VARYING",
             "varchar": "CHARACTER VARYING",
+            "char": "char",
             "boolean": "BOOLEAN",
-            "datetime": "TIMESTAMP",
+            "datetime": "TIMESTAMP WITHOUT TIME ZONE",
             "date": "DATE",
             "timestamptz": "TIMESTAMP WITH TIME ZONE",
             "timestamp": "TIMESTAMP WITH TIME ZONE",
-            "datetime": "TIMESTAMP WITHOUT TIME ZONE",
+            "time": "TIME",
             "json": "JSONB"
         };
         
