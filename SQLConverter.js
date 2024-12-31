@@ -27,7 +27,7 @@ class SQLConverter {
             "nvarchar": "NVARCHAR",
             "varchar": "NVARCHAR",
             "character varying": "NVARCHAR",
-            "char": "TEXT",
+            "char": "NVARCHAR",
             "tinytext": "TEXT",
             "mediumtext": "TEXT",
             "longtext": "TEXT",

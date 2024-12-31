@@ -42,7 +42,7 @@ class SQLConverter // NOSONAR
             "nvarchar" => "NVARCHAR",
             "varchar" => "NVARCHAR",
             "character varying" => "NVARCHAR", // NOSONAR
-            "char" => "TEXT",
+            "char" => "NVARCHAR",
             "tinytext" => "TEXT",
             "mediumtext" => "TEXT",
             "longtext" => "TEXT",
