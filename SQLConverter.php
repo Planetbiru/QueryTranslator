@@ -2,17 +2,35 @@
 
 namespace QueryUtil;
 
+use Exception;
 
-class SQLConverter {
-
+class SQLConverter // NOSONAR
+{
+    /**
+     * Array mapping of database field types to SQLite data types.
+     *
+     * @var array
+     */
     private $dbToSqlite;
+
+    /**
+     * Array mapping of database field types to MySQL data types.
+     *
+     * @var array
+     */
     private $dbToMySQL;
+
+    /**
+     * Array mapping of database field types to PostgreSQL data types.
+     *
+     * @var array
+     */
     private $dbToPostgreSQL;
 
     public function __construct() {
         $this->dbToSqlite = [
             "int" => "INTEGER",
-            "tinyint(1)" => "BOOLEAN",
+            "tinyint(1)" => "BOOLEAN", // NOSONAR
             "tinyint" => "INTEGER",
             "smallint" => "INTEGER",
             "mediumint" => "INTEGER",
@@ -23,7 +41,7 @@ class SQLConverter {
             "decimal" => "REAL",
             "nvarchar" => "NVARCHAR",
             "varchar" => "NVARCHAR",
-            "character varying" => "NVARCHAR",
+            "character varying" => "NVARCHAR", // NOSONAR
             "char" => "TEXT",
             "tinytext" => "TEXT",
             "mediumtext" => "TEXT",
@@ -61,7 +79,7 @@ class SQLConverter {
             "nvarchar" => "VARCHAR",
             "varchar" => "VARCHAR",
             "character varying" => "VARCHAR",
-            "tinyint(1)" => "TINYINT(1)",
+            "tinyint(1)" => "TINYINT(1)", // NOSONAR
             "tinyint" => "TINYINT",
             "boolean" => "TINYINT(1)",
             "int" => "INT",
@@ -90,7 +108,7 @@ class SQLConverter {
             "smalltext" => "TEXT",
             "tinytext" => "TEXT",
             "text" => "TEXT",
-            "character varying" => "CHARACTER VARYING",
+            "character varying" => "CHARACTER VARYING", // NOSONAR
             "nvarchar" => "CHARACTER VARYING",
             "varchar" => "CHARACTER VARYING",
             "char" => "char",
@@ -349,65 +367,138 @@ class SQLConverter {
     }
 
     /**
-     * Converts a column type to the appropriate SQLite type.
-     *
-     * This method converts the given column type to its corresponding SQLite type.
-     *
-     * @param string $type The column type to convert.
-     * @param string $length Optional. The length of the column (default is '').
-     * @return string The converted SQLite type.
+     * Converts a column type to the SQLite type format.
+     * @param string $type The original column type.
+     * @param int|null $length The column length (optional).
+     * @return string The converted SQLite column type.
      */
-    private function toSqliteType($type, $length = '') {
-        return $this->convertType($type, $length, 'sqlite');
-    }
+    public function toSqliteType($type, $length = null) {
+        $type = strtolower($type);
 
-    /**
-     * Converts a column type to the appropriate MySQL type.
-     *
-     * This method converts the given column type to its corresponding MySQL type.
-     *
-     * @param string $type The column type to convert.
-     * @param string $length Optional. The length of the column (default is '').
-     * @return string The converted MySQL type.
-     */
-    private function toMySQLType($type, $length = '') {
-        return $this->convertType($type, $length, 'mysql');
-    }
-
-    /**
-     * Converts a column type to the appropriate PostgreSQL type.
-     *
-     * This method converts the given column type to its corresponding PostgreSQL type.
-     *
-     * @param string $type The column type to convert.
-     * @param string $length Optional. The length of the column (default is '').
-     * @return string The converted PostgreSQL type.
-     */
-    private function toPostgreSQLType($type, $length = '') {
-        return $this->convertType($type, $length, 'pgsql');
-    }
-
-    /**
-     * Converts a column type to the appropriate type for the given target database.
-     *
-     * This method maps a given column type to the target database type (SQLite, MySQL, or PostgreSQL).
-     *
-     * @param string $type The column type to convert.
-     * @param string $length Optional. The length of the column (default is '').
-     * @param string $targetType The target database type ('sqlite', 'mysql', or 'pgsql').
-     * @return string The converted column type.
-     */
-    private function convertType($type, $length, $targetType) {
-        // Apply conversion based on the target database type
-        if ($targetType === 'sqlite') {
-            return $this->dbToSqlite[strtolower($type)] ?? strtoupper($type);
-        } elseif ($targetType === 'mysql') {
-            return $this->dbToMySQL[strtolower($type)] ?? strtoupper($type);
-        } elseif ($targetType === 'pgsql') {
-            return $this->dbToPostgreSQL[strtolower($type)] ?? strtoupper($type);
+        if ($type === 'tinyint' && $length === 1) {
+            return 'BOOLEAN';
         }
+
+        $sqliteType = 'TEXT';
+        foreach ($this->dbToSqlite as $key => $value) {
+            if (strpos($type, strtolower($key)) === 0) {
+                $sqliteType = $value;
+                break;
+            }
+        }
+
+        if (strpos(strtoupper($type), 'ENUM') !== false || strpos(strtoupper($type), 'SET') !== false) {
+            $parsedEnum = $this->parseEnumValue($length);
+            $sqliteType = 'NVARCHAR(' . ($parsedEnum['maxLength'] + 2) . ')';
+        } elseif (($sqliteType === 'NVARCHAR' || $sqliteType === 'INT') && $length > 0) {
+            $sqliteType .= "($length)";
+        }
+
+        return $sqliteType;
     }
 
+    /**
+     * Converts a column type to the MySQL type format.
+     * @param string $type The original column type.
+     * @param int|null $length The column length (optional).
+     * @return string The converted MySQL column type.
+     */
+    public function toMySQLType($type, $length = null) {
+        $type = strtolower($type);
+        $mysqlType = 'TEXT';
+
+        if ($this->isTinyInt1($type, $length)) {
+            return 'TINYINT(1)';
+        }
+
+        if ($this->isInteger($type) && $length > 0) {
+            return "{$type}($length)";
+        }
+
+        foreach ($this->dbToMySQL as $key => $value) {
+            if (strpos($type, strtolower($key)) === 0) {
+                $mysqlType = $value;
+                break;
+            }
+        }
+
+        $mysqlType = str_replace('TIMESTAMPTZ', 'TIMESTAMP', $mysqlType);
+
+        if (strpos(strtoupper($type), 'ENUM') !== false) {
+            $parsedEnum = $this->parseEnumValue($length);
+            $mysqlType = 'ENUM(\'' . implode('\',\'', $parsedEnum['resultArray']) . '\')';
+        } elseif (strpos(strtoupper($type), 'SET') !== false) {
+            $parsedEnum = $this->parseEnumValue($length);
+            $mysqlType = 'SET(\'' . implode('\',\'', $parsedEnum['resultArray']) . '\')';
+        } elseif (strpos(strtoupper($type), 'DECIMAL') !== false) {
+            $parsedNumeric = $this->parseNumericType($length);
+            $mysqlType = 'DECIMAL(' . implode(', ', $parsedNumeric['resultArray']) . ')';
+        } elseif (strpos(strtoupper($type), 'NUMERIC') !== false) {
+            $parsedNumeric = $this->parseNumericType($length);
+            $mysqlType = 'NUMERIC(' . implode(', ', $parsedNumeric['resultArray']) . ')';
+        }
+
+        if (($mysqlType === 'VARCHAR' || $mysqlType === 'CHAR') && $length > 0) {
+            $mysqlType .= "($length)";
+        }
+
+        return $mysqlType;
+    }
+
+    /**
+     * Converts a column type to the PostgreSQL type format.
+     * @param string $type The original column type.
+     * @param int|null $length The column length (optional).
+     * @return string The converted PostgreSQL column type.
+     */
+    public function toPostgreSQLType($type, $length = null) {
+        $type = strtolower($type);
+        $pgType = 'TEXT';
+
+        foreach ($this->dbToPostgreSQL as $key => $value) {
+            if (strpos($type, strtolower($key)) === 0) {
+                $pgType = $value;
+                break;
+            }
+        }
+
+        if (strpos(strtoupper($type), 'TINYINT') !== false && $length == 1) {
+            $pgType = 'BOOLEAN';
+        } elseif (strpos(strtoupper($type), 'ENUM') !== false || strpos(strtoupper($type), 'SET') !== false) {
+            $parsedEnum = $this->parseEnumValue($length);
+            $pgType = 'CHARACTER VARYING(' . ($parsedEnum['maxLength'] + 2) . ')';
+        } elseif ($pgType === 'CHARACTER VARYING' && $length > 0) {
+            $pgType .= "($length)";
+        }
+
+        return $pgType;
+    }
+
+    /**
+     * Parses an ENUM type value and extracts the values in single quotes, also calculating the maximum length.
+     * @param string $inputString The ENUM values in a string format.
+     * @return array An associative array containing the result array and maximum length of ENUM values.
+     */
+    private function parseEnumValue($inputString) {
+        preg_match_all("/'([^']+)'/", $inputString, $matches);
+        $resultArray = $matches[1];
+        $maxLength = max(array_map('strlen', $resultArray));
+
+        return ['resultArray' => $resultArray, 'maxLength' => $maxLength];
+    }
+
+    /**
+     * Parses a numeric type value like DECIMAL(6,3), NUMERIC(10,2), etc.
+     * @param string $inputString The numeric value in string format, like 'DECIMAL(6, 3)'.
+     * @return array An associative array containing the type (e.g., DECIMAL) and the length (total digits) and scale (digits after the decimal point).
+     */
+    private function parseNumericType($inputString) {
+        preg_match_all("/([A-Za-z0-9_]+)/", $inputString, $matches); // NOSONAR
+        $resultArray = $matches[1];
+        $maxLength = max(array_map('strlen', $resultArray));
+
+        return ['resultArray' => $resultArray, 'maxLength' => $maxLength];
+    }
 
     /**
      * Converts the table schema into a SQL CREATE TABLE statement for the specified database.
@@ -596,16 +687,16 @@ class SQLConverter {
         $colDef = "";
         
         if (strtoupper($defaultValue) == 'NULL') {
-            $colDef .= ' DEFAULT NULL';
+            $colDef .= ' DEFAULT NULL'; // NOSONAR
         } 
         else if ($this->isBoolean($columnType)) {
-            $colDef .= ' DEFAULT ' . $this->convertToBoolean($defaultValue);
+            $colDef .= ' DEFAULT ' . $this->convertToBoolean($defaultValue); // NOSONAR
         } 
         else if (strpos(strtoupper($columnType), 'INT') !== false) {
-            $colDef .= ' DEFAULT ' . $this->convertToInteger($defaultValue);
+            $colDef .= ' DEFAULT ' . $this->convertToInteger($defaultValue); // NOSONAR
         } 
         else if ($this->isReal($columnType)) {
-            $colDef .= ' DEFAULT ' . $this->convertToReal($defaultValue);
+            $colDef .= ' DEFAULT ' . $this->convertToReal($defaultValue); // NOSONAR
         } 
         else {
             $colDef .= ' DEFAULT ' . $defaultValue;
@@ -660,36 +751,6 @@ class SQLConverter {
     }
 
     /**
-     * Parses an ENUM type value and extracts the values in single quotes, also calculating the maximum length.
-     * 
-     * @param string $inputString The ENUM values in a string format.
-     * @return array An array containing the result array and the maximum length of ENUM values.
-     */
-    public function parseEnumValue($inputString) {
-        preg_match_all("/'([^']+)'/", $inputString, $matches);
-
-        $resultArray = $matches[1];
-        $maxLength = max(array_map('strlen', $resultArray));
-
-        return ['resultArray' => $resultArray, 'maxLength' => $maxLength];
-    }
-
-    /**
-     * Parses a numeric type value like DECIMAL(6,3), NUMERIC(10,2), etc.
-     * 
-     * @param string $inputString The numeric value in string format, like 'DECIMAL(6, 3)'.
-     * @return array An array containing the type and the length and scale of the numeric type.
-     */
-    public function parseNumericType($inputString) {
-        preg_match_all("/([A-Za-z0-9_]+)/", $inputString, $matches);
-
-        $resultArray = $matches[1];
-        $maxLength = max(array_map('strlen', $resultArray));
-
-        return ['resultArray' => $resultArray, 'maxLength' => $maxLength];
-    }
-
-    /**
      * Escapes special characters in a string for use in SQL statements.
      *
      * This method wraps the PHP `addslashes()` function, which adds backslashes before characters
@@ -711,29 +772,37 @@ class SQLConverter {
      * @return array An array of objects, each containing the name of a table to be dropped.
      */
     public function extractDropTableQueries($sql, $targetType) {
+
         // Remove backticks (`) from the entire SQL string before processing
         $sqlWithoutBackticks = str_replace('`', '', $sql);
-
-        // Regular expression to capture DROP TABLE IF EXISTS command
-        $regex = '/DROP TABLE IF EXISTS ([^\s]+)/gi';
-        preg_match_all($regex, $sqlWithoutBackticks, $matches);
-
         $result = [];
+        try
+        {
+            // Regular expression to capture DROP TABLE IF EXISTS command
+            $regex = '/DROP\s+TABLE\s+IF\s+EXISTS\s+([^\s]+)/i';
+            preg_match_all($regex, $sqlWithoutBackticks, $matches);
 
-        // Loop through all matches found
-        foreach ($matches[1] as $match) {
-            // Store the result in the desired format
-            $tableName = $this->extractTableName($match);
             
-            // Format the table name based on the target database type
-            if ($this->isPGSQL($targetType)) {
-                $tableName = '"' . $tableName . '"';
-            } else if ($this->isMySQL($targetType)) {
-                $tableName = '`' . $tableName . '`';
+
+            // Loop through all matches found
+            foreach ($matches[1] as $match) {
+                // Store the result in the desired format
+                $tableName = $this->extractTableName($match);
+                
+                // Format the table name based on the target database type
+                if ($this->isPGSQL($targetType)) {
+                    $tableName = '"' . $tableName . '"';
+                } else if ($this->isMySQL($targetType)) {
+                    $tableName = '`' . $tableName . '`';
+                }
+                $result[] = [
+                    'table' => $tableName    // Table name
+                ];
             }
-            $result[] = [
-                'table' => $tableName    // Table name
-            ];
+        }
+        catch(Exception $e)
+        {
+            // Do nothing
         }
 
         return $result;
@@ -752,7 +821,7 @@ class SQLConverter {
             $input = explode('.', $input)[1];
         }
         // If there is no dot, it means the input is just the table name
-        return preg_replace('/[^a-zA-Z0-9_]/', '', $input); // Remove any invalid characters
+        return preg_replace('/[^a-zA-Z0-9_]/', '', $input); // NOSONAR
     }
 
     

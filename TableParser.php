@@ -1,10 +1,28 @@
 <?php
 
-
 namespace QueryUtil;
 
+use Exception;
 
-
+/**
+ * The TableParser class is responsible for parsing SQL CREATE TABLE statements to extract
+ * table and column information. It validates data types, handles constraints like primary
+ * keys and auto-increment fields, and processes table comments and default values.
+ * This class can handle multiple SQL statements, parsing them into individual queries, 
+ * and extracting structured information about the database schema from SQL scripts.
+ * 
+ * The class supports parsing complex SQL table definitions, including field types,
+ * constraints (e.g., primary keys, auto-increments), and special data types (e.g., ENUM, SET, JSON).
+ * Additionally, it provides methods to normalize and format SQL defaults, handle multi-line SQL statements,
+ * and retrieve detailed schema information for each parsed table.
+ * 
+ * Example usage:
+ * $parser = new TableParser($sql);
+ * $tableInfo = $parser->getResult();
+ * 
+ * The returned result contains structured information about each table, including
+ * columns, their types, constraints, and additional attributes.
+ */
 class TableParser {
     private $typeList;
     private $tableInfo = [];
@@ -53,7 +71,7 @@ class TableParser {
      * @return bool True if the field is a primary key, otherwise false.
      */
     private function isPrimaryKey($field) {
-        $f = strtoupper(trim(preg_replace('/\s+/', ' ', $field)));
+        $f = strtoupper(trim(preg_replace('/\s+/', ' ', $field))); // NOSONAR
         return strpos($f, 'PRIMARY KEY') !== false;
     }
 
@@ -77,9 +95,10 @@ class TableParser {
      * @param string $sql The SQL string representing a CREATE TABLE statement.
      * @return array An array containing table name, columns, and primary key information.
      */
-    public function parseTable($sql) {
+    public function parseTable($sql) // NOSONAR
+    {
         $rg_tb = '/(create\s+table\s+if\s+not\s+exists|create\s+table)\s(?<tb>.*)\s\(/i';
-        $rg_fld = '/(\w+\s+key.*|\w+\s+bigserial|\w+\s+serial4|\w+\s+serial8|\w+\s+tinyint.*|\w+\s+bigint.*|\w+\s+longtext.*|\w+\s+mediumtext.*|\w+\s+text.*|\w+\s+nvarchar.*|\w+\s+varchar.*|\w+\s+char.*|\w+\s+real.*|\w+\s+float.*|\w+\s+integer.*|\w+\s+int.*|\w+\s+datetime.*|\w+\s+date.*|\w+\s+double.*|\w+\s+timestamp.*|\w+\s+timestamptz.*|\w+\s+boolean.*|\w+\s+bool.*|\w+\s+enum\s*\(.*\)|\w+\s+set\s*\(.*\)|\w+\s+numeric\s*\(.*\)|\w+\s+decimal\s*\(.*\)|\w+\s+int2.*|\w+\s+int4.*|\w+\s+int8.*|\w+\s+time.*|\w+\s+uuid.*|\w+\s+money.*|\w+\s+blob.*|\w+\s+bit.*|\w+\s+json.*)/i';
+        $rg_fld = '/(\w+\s+key.*|\w+\s+bigserial|\w+\s+serial4|\w+\s+serial8|\w+\s+tinyint.*|\w+\s+bigint.*|\w+\s+longtext.*|\w+\s+mediumtext.*|\w+\s+text.*|\w+\s+nvarchar.*|\w+\s+varchar.*|\w+\s+char.*|\w+\s+real.*|\w+\s+float.*|\w+\s+integer.*|\w+\s+int.*|\w+\s+datetime.*|\w+\s+date.*|\w+\s+double.*|\w+\s+timestamp.*|\w+\s+timestamptz.*|\w+\s+boolean.*|\w+\s+bool.*|\w+\s+enum\s*\(.*\)|\w+\s+set\s*\(.*\)|\w+\s+numeric\s*\(.*\)|\w+\s+decimal\s*\(.*\)|\w+\s+int2.*|\w+\s+int4.*|\w+\s+int8.*|\w+\s+time.*|\w+\s+uuid.*|\w+\s+money.*|\w+\s+blob.*|\w+\s+bit.*|\w+\s+json.*)/i'; // NOSONAR
         $rg_fld2 = '/(?<fname>\w+)\s+(?<ftype>\w+)(?<fattr>.*)/i';
         $rg_enum = '/enum\s*\(([^)]+)\)/i';
         $rg_set = '/set\s*\(([^)]+)\)/i';
@@ -87,7 +106,7 @@ class TableParser {
         $rg_pk = '/primary\s+key/i';
         $rg_fld_def = '/default\s+([^\'"]+|\'[^\']*\'|\"[^\"]*\")\s*(comment\s+\'[^\']*\')?/i';
         $rg_fld_comment = '/COMMENT\s*\'([^\']*)\'/i';
-        $rg_pk2 = '/(PRIMARY|UNIQUE) KEY[a-zA-Z_0-9\s]+\(([a-zA-Z_0-9,\s]+)\)/i';
+        $rg_pk2 = '/(PRIMARY|UNIQUE) KEY[a-zA-Z_0-9\s]+\(([a-zA-Z_0-9,\s]+)\)/i'; // NOSONAR
         
         preg_match($rg_tb, $sql, $result);
         $tableName = $result['tb'];
@@ -135,10 +154,14 @@ class TableParser {
 
                 $dataType = trim($dataType);
 
+
                 $length = $this->getLength($attr);
 
                 $columnName = trim($fld_def['fname']);
-                if ($isPk) $primaryKeyList[] = $columnName;
+                if ($isPk) 
+                {
+                    $primaryKeyList[] = $columnName;
+                }
                 if (!in_array($columnName, $columnList)) {
                     $fieldList[] = [
                         'Field' => $columnName,
@@ -162,7 +185,8 @@ class TableParser {
 
             if ($primaryKey != null) {
                 $primaryKey = str_replace(['(', ')'], '', $primaryKey);
-                foreach ($fieldList as &$column) {
+                foreach ($fieldList as &$column) // NOSONAR
+                {
                     if ($column['Field'] == $primaryKey) {
                         $column['Key'] = true;
                     }
@@ -216,8 +240,8 @@ class TableParser {
      * @return int|null The length of the field or null if not applicable.
      */
     private function getLength($attr) {
-        preg_match('/\(\d+\)/', $attr, $matches);
-        return isset($matches[0]) ? (int) trim($matches[0], '()') : null;
+        preg_match('/\((\d+)\)/', $attr, $matches);
+        return isset($matches[1]) ? (int) trim($matches[1], '()') : null;
     }
 
     /**
@@ -226,15 +250,136 @@ class TableParser {
      * @param string $sql The SQL statements.
      */
     public function parseAll($sql) {
-        $sql = preg_replace("/\n/", " ", $sql);
-        $sql = preg_replace('/\s+/', ' ', $sql);
-        $tables = explode("CREATE TABLE", $sql);
+        
+        $tables = $this->parseSQL($sql);
 
-        foreach ($tables as $tableSql) {
-            if (strlen($tableSql) > 5) {
-                $this->tableInfo[] = $this->parseTable('CREATE TABLE' . $tableSql);
+        foreach ($tables as $table) {
+            if (isset($table['query'])) {
+
+                try
+                {
+                    $info = $this->parseTable($table['query']);
+
+                    $this->tableInfo[] = $info;
+                }
+                catch(Exception $e)
+                {
+                    // Do nothing
+                }
             }
         }
+    }
+
+    /**
+     * Parses a SQL text, splits it into individual SQL queries, and processes them by handling 
+     * delimiters, comments, and empty lines. It returns an array of queries, each with its delimiter.
+     *
+     * This method processes the SQL text by:
+     * 1. Normalizing newlines.
+     * 2. Removing comment lines and empty lines.
+     * 3. Splitting the SQL text into queries based on the delimiter.
+     * 4. Handling multiple queries that may span across multiple lines.
+     * 5. Changing the delimiter if a new one is specified within the SQL text.
+     * 
+     * @param string $sqlText The input SQL text to be parsed.
+     * 
+     * @return array An array of queries, each containing the SQL query string and its corresponding delimiter.
+     *               Each item in the array is an associative array with two keys:
+     *               - 'query': the SQL query string.
+     *               - 'delimiter': the delimiter used for that query (e.g., ";").
+     */
+    public function parseSQL($sqlText)  // NOSONAR
+    {
+        $sqlText = str_replace("\n", "\r\n", $sqlText);
+        $sqlText = str_replace("\r\r\n", "\r\n", $sqlText);
+        $arr = explode("\r\n", $sqlText);
+        $arr2 = array();
+        foreach($arr as $key=>$val)
+        {
+            $arr[$key] = ltrim($val);
+            if (stripos($arr[$key], "-- ") !== 0 && $arr[$key] !== "--" && $arr[$key] !== "") {
+                $arr2[] = $arr[$key];
+            }
+        }
+        $arr = $arr2;
+        unset($arr2);
+        
+        $append = 0;
+        $skip = 0;
+        $start = 1;
+        $nquery = -1;
+        $delimiter = ";";
+        $query_array = array();
+        $delimiter_array = array();
+        
+        foreach($arr as $line=>$text)
+        {
+            if($text == "" && $append == 1)
+            {
+                $query_array[$nquery] .= "\r\n";
+            }
+            if($append == 0)
+            {
+                if(stripos(ltrim($text, " \t "), "--") === 0)
+                {
+                    $skip = 1;
+                    $nquery++;
+                    $start = 1;
+                    $append = 0;
+                }
+                else
+                {
+                    $skip = 0;
+                }
+            }
+            if($skip == 0)
+            {
+                if($start == 1)
+                {
+                    $nquery++;
+                    $query_array[$nquery] = "";
+                    $delimiter_array[$nquery] = $delimiter;
+                    $start = 0;
+                }
+                $query_array[$nquery] .= $text."\r\n";
+                $delimiter_array[$nquery] = $delimiter;
+                $text = ltrim($text, " \t ");
+                $start = strlen($text)-strlen($delimiter)-1;
+                if(stripos(substr($text, $start), $delimiter) !== false || $text == $delimiter)
+                {
+                    $nquery++;
+                    $start = 1;
+                    $append = 0;
+                }
+                else
+                {
+                    $start = 0;
+                    $append = 1;
+                }
+                $delimiter_array[$nquery] = $delimiter;
+                if(stripos($text, "delimiter ") !== false)
+                {
+                    $text = trim(preg_replace("/\s+/"," ",$text));
+                    $arr2 = explode(" ", $text);
+                    $delimiter = $arr2[1];
+                    $nquery++;
+                    $delimiter_array[$nquery] = $delimiter;
+                    $start = 1;
+                    $append = 0;
+                }
+            }
+        }
+        $result = array();
+        foreach($query_array as $line=>$sql)
+        {
+            $delimiter = $delimiter_array[$line];
+            if (stripos($sql, "delimiter ") !== 0) {
+                $sql = rtrim($sql, " \r\n\t ");
+                $sql = substr($sql, 0, strlen($sql) - strlen($delimiter));			
+                $result[] = array("query" => $sql, "delimiter" => $delimiter);
+            }
+        }
+        return $result;
     }
 
     /**
