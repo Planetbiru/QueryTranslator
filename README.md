@@ -102,6 +102,10 @@ Contributions are welcome! If you'd like to improve the tool, feel free to fork 
 -   **Bug Reports**: If you encounter any bugs, please open an issue on GitHub.
 -   **Feature Requests**: Suggest new features or improvements via the issues page.
 
+## Implementation
+
+This code was implemented in https://github.com/Planetbiru/MagicAppBuilder
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
